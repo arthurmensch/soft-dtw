@@ -23,7 +23,7 @@ k = rng.randint(len(classes))
 X = X_tr[y_tr == classes[k]]
 X = X[rng.permutation(len(X))[:n]]
 
-fig = plt.figure(figsize=(15,4))
+fig = plt.figure(figsize=(15, 4))
 
 barycenter_init = sum(X) / len(X)
 

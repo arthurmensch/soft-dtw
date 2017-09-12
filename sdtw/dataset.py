@@ -2,7 +2,7 @@ import os.path
 import numpy as np
 
 
-home = os.path.expanduser("~")
+home = os.path.expanduser("~/data")
 data_dir = os.path.join(home, "sdtw_data")
 ucr_dir = os.path.join(data_dir, "UCR_TS_Archive_2015")
 
@@ -10,11 +10,12 @@ ucr_dir = os.path.join(data_dir, "UCR_TS_Archive_2015")
 def _parse_ucr(filename):
     y = []
     X = []
-    for line in file(filename):
+    file = open(filename, 'r')
+    for line in file.readlines():
         line = line.strip()
         arr = line.split(",")
         label = int(arr[0])
-        feat = map(float, arr[1:])
+        feat = list(map(float, arr[1:]))
         feat = np.array(feat).reshape(-1, 1)
         y.append(label)
         X.append(feat)

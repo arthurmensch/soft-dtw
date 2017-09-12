@@ -10,23 +10,23 @@ import numpy as np
 cimport numpy as np
 np.import_array()
 
-
-from libc.float cimport DBL_MAX
-from libc.math cimport exp, log
+from libc.float cimport DBL_MAX, FLT_MAX
+from libc.math cimport exp, log, fmax
 from libc.string cimport memset
 
+from cython cimport floating
 
-cdef inline double _softmin3(double a,
-                             double b,
-                             double c,
-                             double gamma):
+cdef inline floating _softmin3(floating a,
+                             floating b,
+                             floating c,
+                             floating gamma):
     a /= -gamma
     b /= -gamma
     c /= -gamma
 
-    cdef double max_val = max(max(a, b), c)
+    cdef floating max_val = fmax(fmax(a, b), c)
 
-    cdef double tmp = 0
+    cdef floating tmp = 0
     tmp += exp(a - max_val)
     tmp += exp(b - max_val)
     tmp += exp(c - max_val)
@@ -34,9 +34,9 @@ cdef inline double _softmin3(double a,
     return -gamma * (log(tmp) + max_val)
 
 
-def _soft_dtw(np.ndarray[double, ndim=2] D,
-              np.ndarray[double, ndim=2] R,
-              double gamma):
+def _soft_dtw(np.ndarray[floating, ndim=2] D,
+              np.ndarray[floating, ndim=2] R,
+              floating gamma):
 
     cdef int m = D.shape[0]
     cdef int n = D.shape[1]
@@ -44,13 +44,20 @@ def _soft_dtw(np.ndarray[double, ndim=2] D,
     cdef int i, j
 
     # Initialization.
-    memset(<void*>R.data, 0, (m+1) * (n+1) * sizeof(double))
+    memset(<void*>R.data, 0, (m+1) * (n+1) * sizeof(floating))
 
-    for i in range(m + 1):
-        R[i, 0] = DBL_MAX
+    if floating is float:
+        for i in range(m + 1):
+            R[i, 0] = FLT_MAX
 
-    for j in range(n + 1):
-        R[0, j] = DBL_MAX
+        for j in range(n + 1):
+            R[0, j] = FLT_MAX
+    else:
+        for i in range(m + 1):
+            R[i, 0] = DBL_MAX
+
+        for j in range(n + 1):
+            R[0, j] = DBL_MAX
 
     R[0, 0] = 0
 
@@ -64,29 +71,40 @@ def _soft_dtw(np.ndarray[double, ndim=2] D,
                                               gamma)
 
 
-def _soft_dtw_grad(np.ndarray[double, ndim=2] D,
-                   np.ndarray[double, ndim=2] R,
-                   np.ndarray[double, ndim=2] E,
-                   double gamma):
+def _soft_dtw_grad(np.ndarray[floating, ndim=2] D,
+                   np.ndarray[floating, ndim=2] R,
+                   np.ndarray[floating, ndim=2] E,
+                   floating gamma):
 
     # We added an extra row and an extra column on the Python side.
     cdef int m = D.shape[0] - 1
     cdef int n = D.shape[1] - 1
 
     cdef int i, j
-    cdef double a, b, c
+    cdef floating a, b, c
 
     # Initialization.
-    memset(<void*>E.data, 0, (m+2) * (n+2) * sizeof(double))
+    memset(<void*>E.data, 0, (m+2) * (n+2) * sizeof(floating))
 
-    for i in range(1, m+1):
-        # For D, indices start from 0 throughout.
-        D[i-1, n] = 0
-        R[i, n+1] = -DBL_MAX
+    if floating is float:
+        for i in range(1, m+1):
+            # For D, indices start from 0 throughout.
+            D[i-1, n] = 0
+            R[i, n+1] = -FLT_MAX
 
-    for j in range(1, n+1):
-        D[m, j-1] = 0
-        R[m+1, j] = -DBL_MAX
+        for j in range(1, n+1):
+            D[m, j-1] = 0
+            R[m+1, j] = -FLT_MAX
+
+    else:
+        for i in range(1, m+1):
+            # For D, indices start from 0 throughout.
+            D[i-1, n] = 0
+            R[i, n+1] = -DBL_MAX
+
+        for j in range(1, n+1):
+            D[m, j-1] = 0
+            R[m+1, j] = -DBL_MAX
 
     E[m+1, n+1] = 1
     R[m+1, n+1] = R[m, n]
